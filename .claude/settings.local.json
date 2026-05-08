@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Read(//c/Users/Admin/Downloads/**)",
+      "Bash(python -c ' *)",
+      "Bash(jar tf *)",
+      "Bash(xargs -I{} bash -c 'jar tf \"{}\" 2>/dev/null | grep \"SecurityAutoConfiguration.class$\" && echo \"IN: {}\"')",
+      "Bash(grep -v \"^$\")",
+      "Bash(./mvnw test-compile *)",
+      "Bash(./mvnw test *)",
+      "Bash(mysql -u root -proot -e \"SELECT VERSION\\(\\);\")"
+    ]
+  }
+}
