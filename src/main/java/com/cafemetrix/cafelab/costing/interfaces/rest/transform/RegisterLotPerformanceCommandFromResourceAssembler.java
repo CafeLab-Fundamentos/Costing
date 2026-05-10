@@ -7,7 +7,7 @@ public class RegisterLotPerformanceCommandFromResourceAssembler {
 
     public static RegisterLotPerformanceCommand toCommandFromResource(RegisterLotPerformanceResource resource) {
         return new RegisterLotPerformanceCommand(
-                resource.coffeeLotId(),
+                resource.userId(),
                 resource.initialWeight(),
                 resource.finalWeight(),
                 resource.productionTimeMinutes()

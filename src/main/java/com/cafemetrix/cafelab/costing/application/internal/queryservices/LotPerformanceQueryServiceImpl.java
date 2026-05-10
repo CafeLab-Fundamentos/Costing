@@ -1,6 +1,7 @@
 package com.cafemetrix.cafelab.costing.application.internal.queryservices;
 
 import com.cafemetrix.cafelab.costing.domain.model.aggregates.LotPerformance;
+import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesByCoffeeLotIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByCoffeeLotIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByIdQuery;
@@ -28,7 +29,7 @@ public class LotPerformanceQueryServiceImpl implements LotPerformanceQueryServic
 
     @Override
     public Optional<LotPerformance> handle(GetLotPerformanceByCoffeeLotIdQuery query) {
-        return lotPerformanceRepository.findByCoffeeLotReferenceValue(query.coffeeLotId());
+        return lotPerformanceRepository.findFirstByCoffeeLotIdOrderByIdDesc(query.coffeeLotId());
     }
 
     @Override
@@ -37,10 +38,15 @@ public class LotPerformanceQueryServiceImpl implements LotPerformanceQueryServic
     }
 
     @Override
+    public List<LotPerformance> handle(GetAllLotPerformancesByCoffeeLotIdQuery query) {
+        return lotPerformanceRepository.findByCoffeeLotId(query.coffeeLotId());
+    }
+
+    @Override
     public List<LotPerformance> handle(GetPerformanceComparisonQuery query) {
         if (query.coffeeLotIds() == null || query.coffeeLotIds().size() < 2) {
             throw new IllegalArgumentException("At least two coffee lot IDs are required for comparison");
         }
-        return lotPerformanceRepository.findByCoffeeLotReferenceValueIn(query.coffeeLotIds());
+        return lotPerformanceRepository.findAllById(query.coffeeLotIds());
     }
 }

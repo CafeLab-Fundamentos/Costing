@@ -8,6 +8,7 @@ public class LotPerformanceResourceFromEntityAssembler {
     public static LotPerformanceResource toResourceFromEntity(LotPerformance entity) {
         return new LotPerformanceResource(
                 entity.getId(),
+                entity.getUserId(),
                 entity.getCoffeeLotId(),
                 entity.getInitialWeight(),
                 entity.getFinalWeight(),

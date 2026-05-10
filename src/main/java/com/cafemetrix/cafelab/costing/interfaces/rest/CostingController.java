@@ -1,5 +1,6 @@
 package com.cafemetrix.cafelab.costing.interfaces.rest;
 
+import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesByCoffeeLotIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByIdQuery;
 import com.cafemetrix.cafelab.costing.domain.services.LotPerformanceCommandService;
@@ -9,6 +10,7 @@ import com.cafemetrix.cafelab.costing.interfaces.rest.resources.RegisterLotPerfo
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.LotPerformanceResourceFromEntityAssembler;
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.RegisterLotPerformanceCommandFromResourceAssembler;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/api/v1/costing", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Costing", description = "Costing Management endpoints")
+@SecurityRequirements
 public class CostingController {
 
     private final LotPerformanceCommandService commandService;
@@ -49,6 +52,18 @@ public class CostingController {
             description = "Returns all registered lot performances")
     public ResponseEntity<List<LotPerformanceResource>> getAllLotPerformances() {
         var performances = queryService.handle(new GetAllLotPerformancesQuery());
+        var resources = performances.stream()
+                .map(LotPerformanceResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(resources);
+    }
+
+    @GetMapping("/lot-performances/coffee-lot/{coffeeLotId}")
+    @Operation(summary = "Get lot performances by stored aggregate id",
+            description = "Returns all rows whose coffee_lot_id matches the aggregate id (same as id after registration)")
+    public ResponseEntity<List<LotPerformanceResource>> getAllLotPerformancesByCoffeeLotId(
+            @PathVariable Long coffeeLotId) {
+        var performances = queryService.handle(new GetAllLotPerformancesByCoffeeLotIdQuery(coffeeLotId));
         var resources = performances.stream()
                 .map(LotPerformanceResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();

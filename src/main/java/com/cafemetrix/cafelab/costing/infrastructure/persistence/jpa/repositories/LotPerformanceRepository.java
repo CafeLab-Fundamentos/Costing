@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LotPerformanceRepository extends JpaRepository<LotPerformance, Long> {
-    Optional<LotPerformance> findByCoffeeLotReferenceValue(Long coffeeLotId);
-    List<LotPerformance> findByCoffeeLotReferenceValueIn(List<Long> coffeeLotIds);
-    boolean existsByCoffeeLotReferenceValue(Long coffeeLotId);
+
+    List<LotPerformance> findByCoffeeLotId(Long coffeeLotId);
+
+    Optional<LotPerformance> findFirstByCoffeeLotIdOrderByIdDesc(Long coffeeLotId);
+
+    List<LotPerformance> findByUserId(Long userId);
 }

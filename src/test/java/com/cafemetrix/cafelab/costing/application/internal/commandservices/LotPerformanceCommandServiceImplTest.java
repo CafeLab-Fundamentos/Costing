@@ -24,7 +24,6 @@ class LotPerformanceCommandServiceImplTest {
 
     @Test
     void shouldRegisterLotPerformanceSuccessfully() {
-        when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(false);
         when(repository.save(any(LotPerformance.class))).thenAnswer(i -> i.getArgument(0));
 
         var command = new RegisterLotPerformanceCommand(1L, 100.0, 85.0, 60);
@@ -33,23 +32,13 @@ class LotPerformanceCommandServiceImplTest {
         assertTrue(result.isPresent());
         assertEquals(85.0, result.get().getYieldPercentage());
         assertEquals(15.0, result.get().getLossWeight());
-        verify(repository).save(any(LotPerformance.class));
-    }
-
-    @Test
-    void shouldThrowWhenPerformanceAlreadyExistsForLot() {
-        when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(true);
-
-        var command = new RegisterLotPerformanceCommand(1L, 100.0, 85.0, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.handle(command));
-        verify(repository, never()).save(any());
+        assertEquals(1L, result.get().getUserId());
+        verify(repository, times(2)).save(any(LotPerformance.class));
     }
 
     @Test
     void shouldNotSaveWhenFinalWeightExceedsInitialWeight() {
         var command = new RegisterLotPerformanceCommand(1L, 100.0, 110.0, 60);
-        when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> service.handle(command));
         verify(repository, never()).save(any());
@@ -57,11 +46,9 @@ class LotPerformanceCommandServiceImplTest {
 
     @Test
     void shouldCalculateCorrectProductivityPerHour() {
-        when(repository.existsByCoffeeLotReferenceValue(2L)).thenReturn(false);
         when(repository.save(any(LotPerformance.class))).thenAnswer(i -> i.getArgument(0));
 
-        // 90 kg in 30 min → 180 kg/h
-        var command = new RegisterLotPerformanceCommand(2L, 100.0, 90.0, 30);
+        var command = new RegisterLotPerformanceCommand(1L, 100.0, 90.0, 30);
         var result = service.handle(command);
 
         assertTrue(result.isPresent());

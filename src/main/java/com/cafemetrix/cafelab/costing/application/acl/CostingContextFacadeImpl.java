@@ -24,15 +24,15 @@ public class CostingContextFacadeImpl implements CostingContextFacade {
     }
 
     @Override
-    public Long registerLotPerformance(Long coffeeLotId, Double initialWeight,
+    public Long registerLotPerformance(Long userId, Double initialWeight,
                                        Double finalWeight, Integer productionTimeMinutes) {
         try {
-            var command = new RegisterLotPerformanceCommand(coffeeLotId, initialWeight, finalWeight, productionTimeMinutes);
+            var command = new RegisterLotPerformanceCommand(userId, initialWeight, finalWeight, productionTimeMinutes);
             return commandService.handle(command)
                     .map(p -> p.getId())
                     .orElse(null);
         } catch (Exception e) {
-            log.error("Failed to register lot performance for coffeeLotId={}: {}", coffeeLotId, e.getMessage());
+            log.error("Failed to register lot performance: {}", e.getMessage());
             return null;
         }
     }

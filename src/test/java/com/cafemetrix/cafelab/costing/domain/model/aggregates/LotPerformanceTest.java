@@ -23,17 +23,30 @@ class LotPerformanceTest {
 
     @Test
     void shouldCalculateProductivityPerHourCorrectly() {
-        // 85 kg / 60 min * 60 = 85 kg/h
         var command = new RegisterLotPerformanceCommand(1L, 100.0, 85.0, 60);
         var performance = new LotPerformance(command);
         assertEquals(85.0, performance.calculateProductivityPerHour(), 0.01);
     }
 
     @Test
-    void shouldReturnCorrectCoffeeLotId() {
-        var command = new RegisterLotPerformanceCommand(42L, 100.0, 90.0, 45);
+    void shouldExposeCoffeeLotIdAsAggregateId() {
+        var command = new RegisterLotPerformanceCommand(1L, 100.0, 90.0, 45);
         var performance = new LotPerformance(command);
-        assertEquals(42L, performance.getCoffeeLotId());
+        assertEquals(performance.getId(), performance.getCoffeeLotId());
+    }
+
+    @Test
+    void shouldStoreUserIdFromCommand() {
+        var command = new RegisterLotPerformanceCommand(77L, 100.0, 85.0, 60);
+        var performance = new LotPerformance(command);
+        assertEquals(77L, performance.getUserId());
+    }
+
+    @Test
+    void shouldAcceptNullUserId() {
+        var command = new RegisterLotPerformanceCommand(null, 100.0, 85.0, 60);
+        var performance = new LotPerformance(command);
+        assertNull(performance.getUserId());
     }
 
     @Test
@@ -59,7 +72,6 @@ class LotPerformanceTest {
 
     @Test
     void shouldRoundYieldToTwoDecimalPlaces() {
-        // 88 / 120 * 100 = 73.333...  → rounds to 73.33
         var command = new RegisterLotPerformanceCommand(1L, 120.0, 88.0, 30);
         var performance = new LotPerformance(command);
         assertEquals(73.33, performance.getYieldPercentage(), 0.001);
