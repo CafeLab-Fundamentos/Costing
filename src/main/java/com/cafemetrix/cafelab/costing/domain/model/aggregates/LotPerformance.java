@@ -5,11 +5,22 @@ import com.cafemetrix.cafelab.costing.domain.model.valueobjects.*;
 import com.cafemetrix.cafelab.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import jakarta.persistence.*;
 
+/**
+ * Rendimiento productivo registrado para un lote ya procesado (US14).
+ * {@code userId} mantiene la convencion del monolitico: columna {@code user_id} FK logica a
+ * {@code profiles.id}. {@code coffeeLotId} referencia {@code coffee_lots.id} del bounded
+ * context Production.
+ */
 @Entity
+@Table(name = "lot_performances",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"coffee_lot_id"}))
 public class LotPerformance extends AuditableAbstractAggregateRoot<LotPerformance> {
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "coffee_lot_id"))
+    @AttributeOverride(name = "value", column = @Column(name = "coffee_lot_id", nullable = false))
     private CoffeeLotReference coffeeLotReference;
 
     @Column(nullable = false)
@@ -19,23 +30,24 @@ public class LotPerformance extends AuditableAbstractAggregateRoot<LotPerformanc
     private Double finalWeight;
 
     @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "yield_percentage"))
+    @AttributeOverride(name = "value", column = @Column(name = "yield_percentage", nullable = false))
     private YieldPercentage yieldPercentage;
 
     @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "loss_weight"))
+    @AttributeOverride(name = "value", column = @Column(name = "loss_weight", nullable = false))
     private LossWeight lossWeight;
 
     @Embedded
-    @AttributeOverride(name = "minutes", column = @Column(name = "production_time_minutes"))
+    @AttributeOverride(name = "minutes", column = @Column(name = "production_time_minutes", nullable = false))
     private ProductionTime productionTime;
 
-    public LotPerformance() {}
+    protected LotPerformance() {}
 
     public LotPerformance(RegisterLotPerformanceCommand command) {
         if (command.finalWeight() > command.initialWeight()) {
             throw new IllegalArgumentException("Final weight cannot exceed initial weight");
         }
+        this.userId = command.userId();
         this.coffeeLotReference = new CoffeeLotReference(command.coffeeLotId());
         this.initialWeight = command.initialWeight();
         this.finalWeight = command.finalWeight();
@@ -49,6 +61,7 @@ public class LotPerformance extends AuditableAbstractAggregateRoot<LotPerformanc
         return new YieldPercentage(Math.round(yield * 100.0) / 100.0);
     }
 
+    public Long getUserId() { return userId; }
     public Double getInitialWeight() { return initialWeight; }
     public Double getFinalWeight() { return finalWeight; }
 
@@ -64,12 +77,17 @@ public class LotPerformance extends AuditableAbstractAggregateRoot<LotPerformanc
         return lossWeight.value();
     }
 
+    /** % de merma exigido por US14: complemento del yield (100 - yield), redondeado a 2 decimales. */
+    public Double getLossPercentage() {
+        return Math.round((100.0 - yieldPercentage.value()) * 100.0) / 100.0;
+    }
+
     public Integer getProductionTimeMinutes() {
         return productionTime.minutes();
     }
 
+    /** Productividad horaria (kg/h): {@code finalWeight / minutes * 60}. */
     public Double calculateProductivityPerHour() {
-        if (productionTime.minutes() == 0) return 0.0;
-        return (this.finalWeight / productionTime.minutes()) * 60;
+        return Math.round((this.finalWeight / productionTime.minutes()) * 60 * 100.0) / 100.0;
     }
 }

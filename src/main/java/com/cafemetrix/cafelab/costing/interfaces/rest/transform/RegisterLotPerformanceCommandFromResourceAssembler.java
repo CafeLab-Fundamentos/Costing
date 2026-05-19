@@ -5,8 +5,12 @@ import com.cafemetrix.cafelab.costing.interfaces.rest.resources.RegisterLotPerfo
 
 public class RegisterLotPerformanceCommandFromResourceAssembler {
 
-    public static RegisterLotPerformanceCommand toCommandFromResource(RegisterLotPerformanceResource resource) {
+    private RegisterLotPerformanceCommandFromResourceAssembler() {}
+
+    public static RegisterLotPerformanceCommand toCommandFromResource(Long userId,
+                                                                      RegisterLotPerformanceResource resource) {
         return new RegisterLotPerformanceCommand(
+                userId,
                 resource.coffeeLotId(),
                 resource.initialWeight(),
                 resource.finalWeight(),

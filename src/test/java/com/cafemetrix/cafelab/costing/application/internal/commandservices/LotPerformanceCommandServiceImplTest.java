@@ -22,17 +22,21 @@ class LotPerformanceCommandServiceImplTest {
     @InjectMocks
     private LotPerformanceCommandServiceImpl service;
 
+    private static RegisterLotPerformanceCommand cmd(Long coffeeLotId, Double initial, Double finalW, Integer minutes) {
+        return new RegisterLotPerformanceCommand(99L, coffeeLotId, initial, finalW, minutes);
+    }
+
     @Test
     void shouldRegisterLotPerformanceSuccessfully() {
         when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(false);
         when(repository.save(any(LotPerformance.class))).thenAnswer(i -> i.getArgument(0));
 
-        var command = new RegisterLotPerformanceCommand(1L, 100.0, 85.0, 60);
-        var result = service.handle(command);
+        var result = service.handle(cmd(1L, 100.0, 85.0, 60));
 
         assertTrue(result.isPresent());
         assertEquals(85.0, result.get().getYieldPercentage());
         assertEquals(15.0, result.get().getLossWeight());
+        assertEquals(99L, result.get().getUserId());
         verify(repository).save(any(LotPerformance.class));
     }
 
@@ -40,18 +44,15 @@ class LotPerformanceCommandServiceImplTest {
     void shouldThrowWhenPerformanceAlreadyExistsForLot() {
         when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(true);
 
-        var command = new RegisterLotPerformanceCommand(1L, 100.0, 85.0, 60);
-
-        assertThrows(IllegalArgumentException.class, () -> service.handle(command));
+        assertThrows(IllegalArgumentException.class, () -> service.handle(cmd(1L, 100.0, 85.0, 60)));
         verify(repository, never()).save(any());
     }
 
     @Test
     void shouldNotSaveWhenFinalWeightExceedsInitialWeight() {
-        var command = new RegisterLotPerformanceCommand(1L, 100.0, 110.0, 60);
         when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(false);
 
-        assertThrows(IllegalArgumentException.class, () -> service.handle(command));
+        assertThrows(IllegalArgumentException.class, () -> service.handle(cmd(1L, 100.0, 110.0, 60)));
         verify(repository, never()).save(any());
     }
 
@@ -60,9 +61,8 @@ class LotPerformanceCommandServiceImplTest {
         when(repository.existsByCoffeeLotReferenceValue(2L)).thenReturn(false);
         when(repository.save(any(LotPerformance.class))).thenAnswer(i -> i.getArgument(0));
 
-        // 90 kg in 30 min → 180 kg/h
-        var command = new RegisterLotPerformanceCommand(2L, 100.0, 90.0, 30);
-        var result = service.handle(command);
+        // 90 kg / 30 min * 60 = 180 kg/h
+        var result = service.handle(cmd(2L, 100.0, 90.0, 30));
 
         assertTrue(result.isPresent());
         assertEquals(180.0, result.get().calculateProductivityPerHour(), 0.01);

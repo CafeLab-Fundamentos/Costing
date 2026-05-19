@@ -4,6 +4,7 @@ import com.cafemetrix.cafelab.costing.domain.model.aggregates.LotPerformance;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByCoffeeLotIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByIdQuery;
+import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformancesByUserIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetPerformanceComparisonQuery;
 import com.cafemetrix.cafelab.costing.domain.services.LotPerformanceQueryService;
 import com.cafemetrix.cafelab.costing.infrastructure.persistence.jpa.repositories.LotPerformanceRepository;
@@ -34,6 +35,11 @@ public class LotPerformanceQueryServiceImpl implements LotPerformanceQueryServic
     @Override
     public List<LotPerformance> handle(GetAllLotPerformancesQuery query) {
         return lotPerformanceRepository.findAll();
+    }
+
+    @Override
+    public List<LotPerformance> handle(GetLotPerformancesByUserIdQuery query) {
+        return lotPerformanceRepository.findByUserId(query.userId());
     }
 
     @Override
