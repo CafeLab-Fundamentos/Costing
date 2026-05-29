@@ -5,6 +5,8 @@ import com.cafemetrix.cafelab.costing.interfaces.rest.resources.LotPerformanceRe
 
 public class LotPerformanceResourceFromEntityAssembler {
 
+    private LotPerformanceResourceFromEntityAssembler() {}
+
     public static LotPerformanceResource toResourceFromEntity(LotPerformance entity) {
         return new LotPerformanceResource(
                 entity.getId(),
@@ -14,6 +16,7 @@ public class LotPerformanceResourceFromEntityAssembler {
                 entity.getFinalWeight(),
                 entity.getYieldPercentage(),
                 entity.getLossWeight(),
+                entity.getLossPercentage(),
                 entity.getProductionTimeMinutes(),
                 entity.calculateProductivityPerHour()
         );

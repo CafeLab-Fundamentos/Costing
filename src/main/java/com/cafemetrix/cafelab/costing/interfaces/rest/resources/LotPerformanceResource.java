@@ -8,6 +8,7 @@ public record LotPerformanceResource(
         Double finalWeight,
         Double yieldPercentage,
         Double lossWeight,
+        Double lossPercentage,
         Integer productionTimeMinutes,
         Double productivityPerHour
 ) {}
