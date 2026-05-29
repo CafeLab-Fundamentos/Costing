@@ -56,7 +56,11 @@ public class OpenApiConfiguration {
                         .description("Cafe Metrix Documentation")
                         .url("https://cafe-lab-landing-opensource.netlify.app/"));
 
-        final String securitySchemeName = "bearerAuth";
+        // El microservicio vive detras de un API Gateway que valida JWT y reenvia
+        // el id del perfil en el header "X-User-Id". Aqui declaramos ese header
+        // como esquema de "API Key" para que Swagger UI muestre un campo donde
+        // pegarlo (en vez de pedir un Bearer token).
+        final String securitySchemeName = "X-User-Id";
 
         openAPI.addSecurityItem(new SecurityRequirement()
                         .addList(securitySchemeName))
@@ -64,9 +68,9 @@ public class OpenApiConfiguration {
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
                                         .name(securitySchemeName)
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("bearer")
-                                        .bearerFormat("JWT")));
+                                        .type(SecurityScheme.Type.APIKEY)
+                                        .in(SecurityScheme.In.HEADER)
+                                        .description("ID numerico del perfil del usuario, inyectado por el API Gateway tras validar el JWT.")));
 
         return openAPI;
     }
