@@ -9,7 +9,25 @@
       "Bash(grep -v \"^$\")",
       "Bash(./mvnw test-compile *)",
       "Bash(./mvnw test *)",
-      "Bash(mysql -u root -proot -e \"SELECT VERSION\\(\\);\")"
+      "Bash(mysql -u root -proot -e \"SELECT VERSION\\(\\);\")",
+      "Bash(pdftotext -layout \"C:\\\\Users\\\\Admin\\\\Downloads\\\\TP Fundamentos.pdf\" \"C:\\\\Users\\\\Admin\\\\Downloads\\\\TP_full.txt\")",
+      "Bash(pdftotext -layout -f 88 -l 110 \"C:\\\\Users\\\\Admin\\\\Downloads\\\\TP Fundamentos.pdf\" \"C:\\\\Users\\\\Admin\\\\Downloads\\\\TP_costing.txt\")",
+      "Bash(git -C \"C:\\\\Users\\\\Admin\\\\Desktop\\\\Fundamentos de arquitectura\\\\cafelab-backend\\\\cafelab-backend\" branch -a)",
+      "Bash(git -C \"C:\\\\Users\\\\Admin\\\\Desktop\\\\Fundamentos de arquitectura\\\\cafelab-backend\\\\cafelab-backend\" log --oneline -10)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Admin\\\\Desktop\\\\Fundamentos de arquitectura\\\\cafelab-backend\\\\cafelab-backend\"; $output = .\\\\mvnw.cmd test 2>&1; $exit = $LASTEXITCODE; $output | Where-Object { $_ -match \"Tests run|FAIL|ERROR|BUILD|Running \" } | Select-Object -Last 80; Write-Output \"EXIT=$exit\")",
+      "Bash(git rev-list *)",
+      "Bash(git merge *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(grep -rn *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Admin\\\\Desktop\\\\Fundamentos de arquitectura\\\\front\\\\cafelab-frontEnd\"; $output = npx ng build --configuration development 2>&1; $exit = $LASTEXITCODE; $output | Select-Object -Last 40; Write-Output \"EXIT=$exit\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('public/i18n/es.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('public/i18n/en.json','utf8'\\)\\); console.log\\('JSON OK'\\)\")",
+      "Bash(git restore *)",
+      "PowerShell(java -version 2>&1)",
+      "PowerShell(mvn -version 2>&1)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Users\\\\Admin\\\\.jdks\\\\ms-17.0.18\"; $env:Path = \"$env:JAVA_HOME\\\\bin;$env:Path\"; Set-Location \"C:\\\\Users\\\\Admin\\\\Desktop\\\\Fundamentos de arquitectura\\\\cafelab-backend\\\\cafelab-backend\"; Write-Output \"Java en uso:\"; & \"$env:JAVA_HOME\\\\bin\\\\java.exe\" -version 2>&1; Write-Output \"---\"; $output = .\\\\mvnw.cmd -DskipTests clean compile 2>&1; $exit = $LASTEXITCODE; $output | Where-Object { $_ -match \"ERROR|BUILD|enforcer|Maven Enforcer|requireJavaVersion\" } | Select-Object -Last 30; Write-Output \"EXIT=$exit\")",
+      "PowerShell(Get-Process -Name \"java\" -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; \\(Get-Process -Name \"java\" -ErrorAction SilentlyContinue | Measure-Object\\).Count)"
     ]
   }
 }

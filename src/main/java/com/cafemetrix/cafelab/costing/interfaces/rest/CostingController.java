@@ -63,10 +63,12 @@ public class CostingController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new MessageResource(message));
     }
 
-    /** Mismo patron que el monolitico (CoffeeLotsController#ownsCoffeeLot). */
+    /** Mismo patron que el monolitico (CoffeeLotsController#ownsCoffeeLot). Usa getters
+     *  estilo bean para mantener compatibilidad al portar este código al monolito, donde el
+     *  facade devuelve directamente el agregado {@code CoffeeLot}. */
     private boolean ownsCoffeeLot(Long coffeeLotId, Long currentUserId) {
         return coffeeproductionContextFacade.getCoffeeLotById(coffeeLotId)
-                .map(lot -> lot.userId() != null && lot.userId().equals(currentUserId))
+                .map(lot -> lot.getUserId() != null && lot.getUserId().equals(currentUserId))
                 .orElse(false);
     }
 
