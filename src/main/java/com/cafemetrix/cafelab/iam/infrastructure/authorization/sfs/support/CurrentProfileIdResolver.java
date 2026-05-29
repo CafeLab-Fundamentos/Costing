@@ -1,36 +1,49 @@
 package com.cafemetrix.cafelab.iam.infrastructure.authorization.sfs.support;
 
-import com.cafemetrix.cafelab.iam.infrastructure.clients.ProfileMonolithClient;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Optional;
 
 /**
- * Resuelve {@code profiles.id} (Long) del usuario autenticado.
- * Costing solo tiene el email del JWT como principal; el id real lo aporta el monolitico
- * via {@link ProfileMonolithClient}.
+ * Resuelve {@code profiles.id} del usuario que origino el request.
+ *
+ * <p>El microservicio Costing vive detras de un API Gateway que valida JWT
+ * y reenvia la peticion inyectando el id del perfil resuelto en el header
+ * {@value #USER_ID_HEADER}. Este componente solo lee ese header; NO valida
+ * tokens ni habla con el monolito.</p>
+ *
+ * <p>Para soportar pruebas locales sin API Gateway tambien se acepta el
+ * header alternativo {@value #USER_ID_HEADER_ALT} (mas comun en mock tools).</p>
  */
 @Component
 public class CurrentProfileIdResolver {
 
-    private final ProfileMonolithClient profileMonolithClient;
-
-    public CurrentProfileIdResolver(ProfileMonolithClient profileMonolithClient) {
-        this.profileMonolithClient = profileMonolithClient;
-    }
+    public static final String USER_ID_HEADER = "X-User-Id";
+    public static final String USER_ID_HEADER_ALT = "X-Profile-Id";
 
     public Optional<Long> resolveProfileId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+        var attrs = RequestContextHolder.getRequestAttributes();
+        if (!(attrs instanceof ServletRequestAttributes sra)) {
             return Optional.empty();
         }
-        Object principal = auth.getPrincipal();
-        if (!(principal instanceof String email) || email.isBlank()) {
+        HttpServletRequest req = sra.getRequest();
+        String value = firstNonBlank(req.getHeader(USER_ID_HEADER), req.getHeader(USER_ID_HEADER_ALT));
+        if (value == null) {
             return Optional.empty();
         }
-        return profileMonolithClient.findProfileIdByEmail(email);
+        try {
+            return Optional.of(Long.parseLong(value.trim()));
+        } catch (NumberFormatException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) return a;
+        if (b != null && !b.isBlank()) return b;
+        return null;
     }
 }
