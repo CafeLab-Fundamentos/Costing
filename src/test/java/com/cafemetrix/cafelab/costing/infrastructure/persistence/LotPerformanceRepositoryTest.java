@@ -35,10 +35,8 @@ class LotPerformanceRepositoryTest {
         var saved = repository.save(new LotPerformance(cmd(OWNER, 1L, 100.0, 85.0, 60)));
 
         assertNotNull(saved.getId());
-        assertEquals(saved.getId(), saved.getCoffeeLotId());
         var found = repository.findById(saved.getId());
         assertTrue(found.isPresent());
-        assertEquals(saved.getId(), found.get().getCoffeeLotId());
         assertEquals(85.0, found.get().getYieldPercentage());
         assertEquals(15.0, found.get().getLossWeight());
         assertEquals(OWNER, found.get().getUserId());
@@ -48,14 +46,14 @@ class LotPerformanceRepositoryTest {
     void shouldFindByCoffeeLotReferenceValue() {
         repository.save(new LotPerformance(cmd(OWNER, 7L, 50.0, 42.0, 30)));
 
-        var found = repository.findById(saved.getId());
+        var found = repository.findByCoffeeLotReferenceValue(7L);
         assertTrue(found.isPresent());
-        assertEquals(saved.getId(), found.get().getCoffeeLotId());
+        assertEquals(7L, found.get().getCoffeeLotId());
     }
 
     @Test
-    void shouldReturnEmptyWhenIdNotRegistered() {
-        var found = repository.findById(999_999L);
+    void shouldReturnEmptyWhenCoffeeLotNotRegistered() {
+        var found = repository.findByCoffeeLotReferenceValue(999L);
         assertTrue(found.isEmpty());
     }
 
@@ -63,8 +61,8 @@ class LotPerformanceRepositoryTest {
     void shouldReturnTrueWhenPerformanceExists() {
         repository.save(new LotPerformance(cmd(OWNER, 3L, 80.0, 70.0, 45)));
 
-        assertTrue(repository.existsById(saved.getId()));
-        assertFalse(repository.existsById(99L));
+        assertTrue(repository.existsByCoffeeLotReferenceValue(3L));
+        assertFalse(repository.existsByCoffeeLotReferenceValue(99L));
     }
 
     @Test
@@ -73,7 +71,7 @@ class LotPerformanceRepositoryTest {
         repository.save(new LotPerformance(cmd(OWNER, 11L, 100.0, 80.0, 60)));
         repository.save(new LotPerformance(cmd(OWNER, 12L, 100.0, 75.0, 60)));
 
-        var results = repository.findAllById(List.of(a.getId(), c.getId()));
+        var results = repository.findByCoffeeLotReferenceValueIn(List.of(10L, 12L));
         assertEquals(2, results.size());
     }
 

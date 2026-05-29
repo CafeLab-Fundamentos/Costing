@@ -9,7 +9,12 @@
       "Bash(grep -v \"^$\")",
       "Bash(./mvnw test-compile *)",
       "Bash(./mvnw test *)",
-      "Bash(mysql -u root -proot -e \"SELECT VERSION\\(\\);\")"
+      "Bash(mysql -u root -proot -e \"SELECT VERSION\\(\\);\")",
+      "Bash(grep -rn *)",
+      "Bash(git commit -m 'Merge branch '\\\\''feature/fix-costing'\\\\'' into main *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix\\(merge\\): align LotPerformance files with feature/fix-costing version *)"
     ]
   }
 }

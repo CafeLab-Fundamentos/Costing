@@ -28,6 +28,7 @@ class LotPerformanceCommandServiceImplTest {
 
     @Test
     void shouldRegisterLotPerformanceSuccessfully() {
+        when(repository.existsByCoffeeLotReferenceValue(1L)).thenReturn(false);
         when(repository.save(any(LotPerformance.class))).thenAnswer(i -> i.getArgument(0));
 
         var result = service.handle(cmd(1L, 100.0, 85.0, 60));
@@ -57,6 +58,7 @@ class LotPerformanceCommandServiceImplTest {
 
     @Test
     void shouldCalculateCorrectProductivityPerHour() {
+        when(repository.existsByCoffeeLotReferenceValue(2L)).thenReturn(false);
         when(repository.save(any(LotPerformance.class))).thenAnswer(i -> i.getArgument(0));
 
         // 90 kg / 30 min * 60 = 180 kg/h

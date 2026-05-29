@@ -16,7 +16,6 @@ import com.cafemetrix.cafelab.iam.infrastructure.authorization.sfs.support.Curre
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeproductionContextFacade;
 import com.cafemetrix.cafelab.shared.interfaces.rest.resources.MessageResource;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

@@ -1,9 +1,7 @@
 package com.cafemetrix.cafelab.costing.domain.model.aggregates;
 
 import com.cafemetrix.cafelab.costing.domain.model.commands.RegisterLotPerformanceCommand;
-import com.cafemetrix.cafelab.costing.domain.model.valueobjects.LossWeight;
-import com.cafemetrix.cafelab.costing.domain.model.valueobjects.ProductionTime;
-import com.cafemetrix.cafelab.costing.domain.model.valueobjects.YieldPercentage;
+import com.cafemetrix.cafelab.costing.domain.model.valueobjects.*;
 import com.cafemetrix.cafelab.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import jakarta.persistence.*;
 
@@ -67,28 +65,8 @@ public class LotPerformance extends AuditableAbstractAggregateRoot<LotPerformanc
     public Double getInitialWeight() { return initialWeight; }
     public Double getFinalWeight() { return finalWeight; }
 
-    /**
-     * Same as {@link #getId()} once {@link #assignCoffeeLotIdFromAggregateId()} has run; falls back to {@code id} if unset.
-     */
     public Long getCoffeeLotId() {
-        return coffeeLotId != null ? coffeeLotId : getId();
-    }
-
-    public void assignCoffeeLotIdFromAggregateId() {
-        if (getId() != null) {
-            this.coffeeLotId = getId();
-        }
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    /**
-     * Optional association with an application user (can also be set on registration via command).
-     */
-    public void assignUserId(Long userId) {
-        this.userId = userId;
+        return coffeeLotReference.value();
     }
 
     public Double getYieldPercentage() {

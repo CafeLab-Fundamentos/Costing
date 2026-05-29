@@ -1,7 +1,6 @@
 package com.cafemetrix.cafelab.costing.domain.services;
 
 import com.cafemetrix.cafelab.costing.domain.model.aggregates.LotPerformance;
-import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesByCoffeeLotIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetAllLotPerformancesQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByCoffeeLotIdQuery;
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformanceByIdQuery;

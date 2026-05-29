@@ -19,10 +19,12 @@ public class LotPerformanceCommandServiceImpl implements LotPerformanceCommandSe
 
     @Override
     public Optional<LotPerformance> handle(RegisterLotPerformanceCommand command) {
+        if (lotPerformanceRepository.existsByCoffeeLotReferenceValue(command.coffeeLotId())) {
+            throw new IllegalArgumentException(
+                    "Performance for coffee lot with id " + command.coffeeLotId() + " is already registered");
+        }
         var lotPerformance = new LotPerformance(command);
-        var saved = lotPerformanceRepository.save(lotPerformance);
-        saved.assignCoffeeLotIdFromAggregateId();
-        lotPerformanceRepository.save(saved);
-        return Optional.of(saved);
+        lotPerformanceRepository.save(lotPerformance);
+        return Optional.of(lotPerformance);
     }
 }
