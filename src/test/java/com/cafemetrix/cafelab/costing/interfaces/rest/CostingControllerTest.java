@@ -8,14 +8,18 @@ import com.cafemetrix.cafelab.costing.domain.model.queries.GetLotPerformancesByU
 import com.cafemetrix.cafelab.costing.domain.model.queries.GetPerformanceComparisonQuery;
 import com.cafemetrix.cafelab.costing.domain.services.LotPerformanceCommandService;
 import com.cafemetrix.cafelab.costing.domain.services.LotPerformanceQueryService;
-import com.cafemetrix.cafelab.iam.infrastructure.authorization.sfs.support.CurrentProfileIdResolver;
+import com.cafemetrix.cafelab.shared.infrastructure.web.ProfileIdResolver;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeLotSummary;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeproductionContextFacade;
 import com.cafemetrix.cafelab.shared.infrastructure.persistence.jpa.configuration.JpaAuditingConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
@@ -32,10 +36,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = CostingController.class,
-        excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class},
+        excludeAutoConfiguration = {
+                SecurityAutoConfiguration.class,
+                SecurityFilterAutoConfiguration.class,
+                UserDetailsServiceAutoConfiguration.class,
+                OAuth2ClientAutoConfiguration.class,
+                OAuth2ResourceServerAutoConfiguration.class
+        },
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
                 classes = JpaAuditingConfiguration.class))
+@AutoConfigureMockMvc(addFilters = false)
 class CostingControllerTest {
 
     private static final Long OWNER = 99L;
@@ -51,7 +62,7 @@ class CostingControllerTest {
     private LotPerformanceQueryService queryService;
 
     @MockBean
-    private CurrentProfileIdResolver currentProfileIdResolver;
+    private ProfileIdResolver profileIdResolver;
 
     @MockBean
     private CoffeeproductionContextFacade coffeeproductionContextFacade;
@@ -62,7 +73,7 @@ class CostingControllerTest {
 
     @Test
     void shouldRegisterLotPerformanceAndReturn201() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
                 .thenReturn(Optional.of(new CoffeeLotSummary(1L, OWNER)));
         when(commandService.handle(any())).thenReturn(Optional.of(ownerPerformance(1L, 100.0, 85.0, 60)));
@@ -85,7 +96,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturn401WhenProfileCannotBeResolved() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.empty());
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/costing/lot-performances"))
                 .andExpect(status().isUnauthorized());
@@ -93,7 +104,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturn403WhenRegisteringPerformanceForForeignLot() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
                 .thenReturn(Optional.of(new CoffeeLotSummary(1L, OTHER_OWNER)));
 
@@ -109,7 +120,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturn404WhenLotPerformanceNotFoundById() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetLotPerformanceByIdQuery.class))).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/costing/lot-performances/999"))
@@ -118,7 +129,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturn403WhenFetchingForeignLotPerformanceById() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         var foreign = new LotPerformance(
                 new RegisterLotPerformanceCommand(OTHER_OWNER, 1L, 100.0, 85.0, 60));
         when(queryService.handle(any(GetLotPerformanceByIdQuery.class))).thenReturn(Optional.of(foreign));
@@ -129,7 +140,7 @@ class CostingControllerTest {
 
     @Test
     void shouldListOnlyOwnLotPerformances() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         var p1 = ownerPerformance(1L, 100.0, 85.0, 60);
         var p2 = ownerPerformance(2L, 200.0, 170.0, 90);
         when(queryService.handle(any(GetLotPerformancesByUserIdQuery.class))).thenReturn(List.of(p1, p2));
@@ -142,7 +153,7 @@ class CostingControllerTest {
 
     @Test
     void shouldFetchLotPerformanceByCoffeeLotIdWhenOwned() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
                 .thenReturn(Optional.of(new CoffeeLotSummary(1L, OWNER)));
         when(queryService.handle(any(GetLotPerformanceByCoffeeLotIdQuery.class)))
@@ -155,7 +166,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturn400WhenComparingLessThanTwoLots() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
 
         mockMvc.perform(get("/api/v1/costing/lot-performances/comparison").param("ids", "1"))
                 .andExpect(status().isBadRequest());
@@ -163,7 +174,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturnComparisonForOwnedLots() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
                 .thenReturn(Optional.of(new CoffeeLotSummary(1L, OWNER)));
         when(coffeeproductionContextFacade.getCoffeeLotById(2L))
@@ -180,7 +191,7 @@ class CostingControllerTest {
 
     @Test
     void shouldRejectComparisonWhenAnyLotIsForeign() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
                 .thenReturn(Optional.of(new CoffeeLotSummary(1L, OWNER)));
         when(coffeeproductionContextFacade.getCoffeeLotById(2L))
@@ -192,7 +203,7 @@ class CostingControllerTest {
 
     @Test
     void shouldReturn400WhenFinalWeightExceedsInitialWeight() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
                 .thenReturn(Optional.of(new CoffeeLotSummary(1L, OWNER)));
         when(commandService.handle(any())).thenThrow(

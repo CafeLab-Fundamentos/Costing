@@ -1,0 +1,95 @@
+@startuml costing-cafelab-clases
+!theme plain
+skinparam classAttributeIconSize 0
+title Modelo de clases — Costing CafeLab
+
+abstract class AuditableAbstractAggregateRoot {
+  - Long id
+  - Date createdAt
+  - Date updatedAt
+  --
+  + getId() : Long
+  + getCreatedAt() : Date
+  + getUpdatedAt() : Date
+  + addDomainEvent(Object event) : void
+}
+
+abstract class AuditableModel {
+  - Long id
+  - Date createdAt
+  - Date updatedAt
+  --
+  + getId() : Long
+  + getCreatedAt() : Date
+  + getUpdatedAt() : Date
+}
+
+class LotPerformance {
+  - Long coffeeLotId
+  - Long userId
+  - Double initialWeight
+  - Double finalWeight
+  - YieldPercentage yieldPercentage
+  - LossWeight lossWeight
+  - ProductionTime productionTime
+  --
+  + LotPerformance()
+  + LotPerformance(RegisterLotPerformanceCommand command)
+  + getInitialWeight() : Double
+  + getFinalWeight() : Double
+  + getCoffeeLotId() : Long
+  + assignCoffeeLotIdFromAggregateId() : void
+  + getUserId() : Long
+  + assignUserId(Long userId) : void
+  + getYieldPercentage() : Double
+  + getLossWeight() : Double
+  + getProductionTimeMinutes() : Integer
+  + calculateProductivityPerHour() : Double
+  - calculateYield() : YieldPercentage
+}
+
+class EfficiencyAnalysis {
+  - Long lotPerformanceId
+  - Double efficiencyScore
+  - String performanceCategory
+  --
+  + EfficiencyAnalysis()
+  + EfficiencyAnalysis(Long lotPerformanceId, Double yieldPercentage, Double productivityPerHour)
+  + getLotPerformanceId() : Long
+  + getEfficiencyScore() : Double
+  + getPerformanceCategory() : String
+  - calculateScore(Double yieldPercentage, Double productivityPerHour) : Double
+  - resolveCategory(Double score) : String
+}
+
+class YieldPercentage <<record>> {
+  - Double value
+  --
+  + YieldPercentage()
+  + YieldPercentage(Double value)
+  + value() : Double
+}
+
+class ProductionTime <<record>> {
+  - Integer minutes
+  --
+  + ProductionTime()
+  + ProductionTime(Integer minutes)
+  + minutes() : Integer
+}
+
+class LossWeight <<record>> {
+  - Double value
+  --
+  + LossWeight()
+  + LossWeight(Double value)
+  + value() : Double
+}
+
+AuditableAbstractAggregateRoot <|-- LotPerformance
+AuditableModel <|-- EfficiencyAnalysis
+LotPerformance *-- YieldPercentage
+LotPerformance *-- LossWeight
+LotPerformance *-- ProductionTime
+
+@enduml

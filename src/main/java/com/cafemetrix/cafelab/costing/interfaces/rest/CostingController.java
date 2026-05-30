@@ -12,7 +12,7 @@ import com.cafemetrix.cafelab.costing.interfaces.rest.resources.LotPerformanceRe
 import com.cafemetrix.cafelab.costing.interfaces.rest.resources.RegisterLotPerformanceResource;
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.LotPerformanceResourceFromEntityAssembler;
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.RegisterLotPerformanceCommandFromResourceAssembler;
-import com.cafemetrix.cafelab.iam.infrastructure.authorization.sfs.support.CurrentProfileIdResolver;
+import com.cafemetrix.cafelab.shared.infrastructure.web.ProfileIdResolver;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeproductionContextFacade;
 import com.cafemetrix.cafelab.shared.interfaces.rest.resources.MessageResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +29,8 @@ import java.util.Optional;
 /**
  * Endpoints de US14 (Analisis de Eficiencia y Rendimiento). Patron de autorizacion
  * alineado con el monolitico (CoffeeLotsController, InventoryEntriesController):
- * el {@code userId} viene del JWT y la pertenencia del lote se valida via ACL hacia Production.
+ * el {@code userId} viene del header {@code X-User-Id} inyectado por el API Gateway;
+ * la pertenencia del lote se valida via ACL hacia Production.
  */
 @RestController
 @RequestMapping(value = "/api/v1/costing/lot-performances", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -38,21 +39,21 @@ public class CostingController {
 
     private final LotPerformanceCommandService commandService;
     private final LotPerformanceQueryService queryService;
-    private final CurrentProfileIdResolver currentProfileIdResolver;
+    private final ProfileIdResolver profileIdResolver;
     private final CoffeeproductionContextFacade coffeeproductionContextFacade;
 
     public CostingController(LotPerformanceCommandService commandService,
                              LotPerformanceQueryService queryService,
-                             CurrentProfileIdResolver currentProfileIdResolver,
+                             ProfileIdResolver profileIdResolver,
                              CoffeeproductionContextFacade coffeeproductionContextFacade) {
         this.commandService = commandService;
         this.queryService = queryService;
-        this.currentProfileIdResolver = currentProfileIdResolver;
+        this.profileIdResolver = profileIdResolver;
         this.coffeeproductionContextFacade = coffeeproductionContextFacade;
     }
 
     private Optional<Long> resolveCurrentUserId() {
-        return currentProfileIdResolver.resolveProfileId();
+        return profileIdResolver.resolveProfileId();
     }
 
     private ResponseEntity<MessageResource> unauthorized(String message) {
@@ -72,12 +73,12 @@ public class CostingController {
                 .orElse(false);
     }
 
-    @Operation(summary = "Registrar rendimiento de un lote (userId desde JWT; lote debe ser suyo)")
+    @Operation(summary = "Registrar rendimiento de un lote (userId desde X-User-Id; lote debe ser suyo)")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> registerLotPerformance(@Valid @RequestBody RegisterLotPerformanceResource resource) {
         Optional<Long> ownerIdOpt = resolveCurrentUserId();
         if (ownerIdOpt.isEmpty()) {
-            return unauthorized("Usuario no autenticado o perfil no encontrado");
+            return unauthorized("Falta el header X-User-Id (debe ser inyectado por el API Gateway)");
         }
         Long ownerId = ownerIdOpt.get();
         if (!ownsCoffeeLot(resource.coffeeLotId(), ownerId)) {
@@ -96,7 +97,7 @@ public class CostingController {
     public ResponseEntity<?> getAllLotPerformances() {
         Optional<Long> userIdOpt = resolveCurrentUserId();
         if (userIdOpt.isEmpty()) {
-            return unauthorized("Usuario no autenticado o perfil no encontrado");
+            return unauthorized("Falta el header X-User-Id (debe ser inyectado por el API Gateway)");
         }
         var performances = queryService.handle(new GetLotPerformancesByUserIdQuery(userIdOpt.get()));
         return ResponseEntity.ok(performances.stream()
@@ -109,7 +110,7 @@ public class CostingController {
     public ResponseEntity<?> getLotPerformanceById(@PathVariable Long id) {
         Optional<Long> currentOpt = resolveCurrentUserId();
         if (currentOpt.isEmpty()) {
-            return unauthorized("Usuario no autenticado o perfil no encontrado");
+            return unauthorized("Falta el header X-User-Id (debe ser inyectado por el API Gateway)");
         }
         var performance = queryService.handle(new GetLotPerformanceByIdQuery(id));
         if (performance.isEmpty()) {
@@ -126,7 +127,7 @@ public class CostingController {
     public ResponseEntity<?> getLotPerformanceByCoffeeLotId(@PathVariable Long coffeeLotId) {
         Optional<Long> currentOpt = resolveCurrentUserId();
         if (currentOpt.isEmpty()) {
-            return unauthorized("Usuario no autenticado o perfil no encontrado");
+            return unauthorized("Falta el header X-User-Id (debe ser inyectado por el API Gateway)");
         }
         if (!ownsCoffeeLot(coffeeLotId, currentOpt.get())) {
             return forbidden("No autorizado para consultar este lote");
@@ -142,7 +143,7 @@ public class CostingController {
     public ResponseEntity<?> getLotPerformancesByUserId(@PathVariable Long userId) {
         Optional<Long> currentOpt = resolveCurrentUserId();
         if (currentOpt.isEmpty()) {
-            return unauthorized("Usuario no autenticado o perfil no encontrado");
+            return unauthorized("Falta el header X-User-Id (debe ser inyectado por el API Gateway)");
         }
         if (!currentOpt.get().equals(userId)) {
             return forbidden("No puede consultar rendimientos de otro perfil");
@@ -158,7 +159,7 @@ public class CostingController {
     public ResponseEntity<?> compareLotPerformances(@RequestParam("ids") List<Long> coffeeLotIds) {
         Optional<Long> currentOpt = resolveCurrentUserId();
         if (currentOpt.isEmpty()) {
-            return unauthorized("Usuario no autenticado o perfil no encontrado");
+            return unauthorized("Falta el header X-User-Id (debe ser inyectado por el API Gateway)");
         }
         if (coffeeLotIds == null || coffeeLotIds.size() < 2) {
             return ResponseEntity.badRequest()

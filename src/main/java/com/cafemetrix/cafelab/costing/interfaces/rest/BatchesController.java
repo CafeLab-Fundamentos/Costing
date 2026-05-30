@@ -30,7 +30,7 @@ import com.cafemetrix.cafelab.costing.interfaces.rest.transform.IndirectCostsRes
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.RecommendationResourceFromEntityAssembler;
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.RegisterDirectCostsCommandFromResourceAssembler;
 import com.cafemetrix.cafelab.costing.interfaces.rest.transform.RegisterIndirectCostsCommandFromResourceAssembler;
-import com.cafemetrix.cafelab.iam.infrastructure.authorization.sfs.support.CurrentProfileIdResolver;
+import com.cafemetrix.cafelab.shared.infrastructure.web.ProfileIdResolver;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeproductionContextFacade;
 import com.cafemetrix.cafelab.shared.interfaces.rest.resources.MessageResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,7 +54,7 @@ import java.util.Optional;
 /**
  * Endpoints del bounded context Costing (PDF 4.1.4.3.4 / 4.1.5.4):
  * Batch y sus entidades hijas (DirectCosts, IndirectCosts, CostSummary,
- * FinancialIndicators, Recommendations). userId se resuelve desde el JWT.
+ * FinancialIndicators, Recommendations). userId se resuelve desde X-User-Id (API Gateway).
  */
 @RestController
 @RequestMapping(value = "/api/v1/costing/batches", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -63,16 +63,16 @@ public class BatchesController {
 
     private final BatchCommandService commandService;
     private final BatchQueryService queryService;
-    private final CurrentProfileIdResolver currentProfileIdResolver;
+    private final ProfileIdResolver profileIdResolver;
     private final CoffeeproductionContextFacade coffeeproductionContextFacade;
 
     public BatchesController(BatchCommandService commandService,
                              BatchQueryService queryService,
-                             CurrentProfileIdResolver currentProfileIdResolver,
+                             ProfileIdResolver profileIdResolver,
                              CoffeeproductionContextFacade coffeeproductionContextFacade) {
         this.commandService = commandService;
         this.queryService = queryService;
-        this.currentProfileIdResolver = currentProfileIdResolver;
+        this.profileIdResolver = profileIdResolver;
         this.coffeeproductionContextFacade = coffeeproductionContextFacade;
     }
 
@@ -86,12 +86,12 @@ public class BatchesController {
     }
 
     private Optional<Long> resolveCurrentUserId() {
-        return currentProfileIdResolver.resolveProfileId();
+        return profileIdResolver.resolveProfileId();
     }
 
     private ResponseEntity<MessageResource> unauthorized() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new MessageResource("Usuario no autenticado o perfil no encontrado"));
+                .body(new MessageResource("Falta el header X-User-Id (debe ser inyectado por el API Gateway)"));
     }
 
     private ResponseEntity<MessageResource> forbidden(String message) {
@@ -109,7 +109,7 @@ public class BatchesController {
 
     // ------------------------------- Batch CRUD -------------------------------
 
-    @Operation(summary = "Crear batch (userId desde JWT)")
+    @Operation(summary = "Crear batch (userId desde X-User-Id)")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createBatch(@Valid @RequestBody CreateBatchResource resource) {
         var current = resolveCurrentUserId();

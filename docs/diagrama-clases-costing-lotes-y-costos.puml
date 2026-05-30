@@ -1,0 +1,142 @@
+@startuml costing-cafelab-lotes-y-costos
+!theme plain
+skinparam classAttributeIconSize 0
+title Modelo de clases — Costing CafeLab (lote / costos directos e indirectos)\nBasado en modelo de dominio por lote; entidad central equivalente a «Batchs» en el diseño.
+
+abstract class AuditableAbstractAggregateRoot {
+  - Long id
+  - Date createdAt
+  - Date updatedAt
+  --
+  + getId() : Long
+  + getCreatedAt() : Date
+  + getUpdatedAt() : Date
+  + addDomainEvent(Object event) : void
+}
+
+class Batch {
+  - String batchName
+  - String registrationDate
+  --
+  + getBatchName() : String
+  + getRegistrationDate() : String
+  + setBatchName(String batchName) : void
+  + setRegistrationDate(String registrationDate) : void
+}
+
+class DirectCosts {
+  - Long coffeeLotId
+  - String rawMaterialCost
+  - Double coffeeQuantityKg
+  - Integer totalRawMaterial
+  - Double hoursWorked
+  - Double costPerHour
+  - Integer numWorkers
+  - Double totalLaborCost
+  --
+  + getCoffeeLotId() : Long
+  + getRawMaterialCost() : String
+  + getCoffeeQuantityKg() : Double
+  + getTotalRawMaterial() : Integer
+  + getHoursWorked() : Double
+  + getCostPerHour() : Double
+  + getNumWorkers() : Integer
+  + getTotalLaborCost() : Double
+}
+
+class IndirectCosts {
+  - Long batchId
+  - String transport
+  - Integer storageDays
+  - Double dailyStorageCost
+  - Double totalStorageCost
+  - String electricity
+  - String machineryMaintenance
+  - String processingSupplies
+  - Double waterUsed
+  - String equipmentDepreciation
+  - String qualityControl
+  - String certifications
+  - String insurance
+  - String adminExpenses
+  --
+  + getBatchId() : Long
+  + getTransport() : String
+  + getStorageDays() : Integer
+  + getDailyStorageCost() : Double
+  + getTotalStorageCost() : Double
+  + getElectricity() : String
+  + getMachineryMaintenance() : String
+  + getProcessingSupplies() : String
+  + getWaterUsed() : Double
+  + getEquipmentDepreciation() : String
+  + getQualityControl() : String
+  + getCertifications() : String
+  + getInsurance() : String
+  + getAdminExpenses() : String
+}
+
+class Recommendations {
+  - Long batchId
+  - String recommendationText
+  --
+  + getBatchId() : Long
+  + getRecommendationText() : String
+}
+
+class CostSummary {
+  - Long batchId
+  - String rawMaterial
+  - String directLabor
+  - String transport
+  - String storage
+  - String processing
+  - String otherCosts
+  - Integer total
+  - Double costPerKg
+  - Double costPerCup
+  --
+  + getBatchId() : Long
+  + getRawMaterial() : String
+  + getDirectLabor() : String
+  + getTransport() : String
+  + getStorage() : String
+  + getProcessing() : String
+  + getOtherCosts() : String
+  + getTotal() : Integer
+  + getCostPerKg() : Double
+  + getCostPerCup() : Double
+}
+
+class FinancialIndicators {
+  - Long batchId
+  - Double costPerKg
+  - String potentialMargin
+  - Double suggestedPrice
+  --
+  + getBatchId() : Long
+  + getCostPerKg() : Double
+  + getPotentialMargin() : String
+  + getSuggestedPrice() : Double
+}
+
+AuditableAbstractAggregateRoot <|-- Batch
+AuditableAbstractAggregateRoot <|-- DirectCosts
+AuditableAbstractAggregateRoot <|-- IndirectCosts
+AuditableAbstractAggregateRoot <|-- Recommendations
+AuditableAbstractAggregateRoot <|-- CostSummary
+AuditableAbstractAggregateRoot <|-- FinancialIndicators
+
+Batch "1" o-- "0..*" DirectCosts : coffeeLotId\n(ref. lote)
+Batch "1" o-- "0..*" IndirectCosts : batchId
+Batch "1" o-- "0..*" Recommendations : batchId
+Batch "1" o-- "0..*" CostSummary : batchId
+Batch "1" o-- "0..*" FinancialIndicators : batchId
+
+note right of Batch
+  En el diagrama de referencia la entidad central
+  aparece como «Batchs» (nombre de tabla o mockup).
+  Aquí se modela como **Batch** (agregado raíz de lote).
+end note
+
+@enduml

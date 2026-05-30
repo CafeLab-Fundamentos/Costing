@@ -8,14 +8,18 @@ import com.cafemetrix.cafelab.costing.domain.services.BatchCommandService;
 import com.cafemetrix.cafelab.costing.domain.services.BatchQueryService;
 import com.cafemetrix.cafelab.costing.domain.model.commands.RegisterDirectCostsCommand;
 import com.cafemetrix.cafelab.costing.domain.model.entities.DirectCosts;
-import com.cafemetrix.cafelab.iam.infrastructure.authorization.sfs.support.CurrentProfileIdResolver;
+import com.cafemetrix.cafelab.shared.infrastructure.web.ProfileIdResolver;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeLotSummary;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeproductionContextFacade;
 import com.cafemetrix.cafelab.shared.infrastructure.persistence.jpa.configuration.JpaAuditingConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
@@ -33,10 +37,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = BatchesController.class,
-        excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class},
+        excludeAutoConfiguration = {
+                SecurityAutoConfiguration.class,
+                SecurityFilterAutoConfiguration.class,
+                UserDetailsServiceAutoConfiguration.class,
+                OAuth2ClientAutoConfiguration.class,
+                OAuth2ResourceServerAutoConfiguration.class
+        },
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
                 classes = JpaAuditingConfiguration.class))
+@AutoConfigureMockMvc(addFilters = false)
 class BatchesControllerTest {
 
     private static final Long OWNER = 7L;
@@ -52,7 +63,7 @@ class BatchesControllerTest {
     private BatchQueryService queryService;
 
     @MockBean
-    private CurrentProfileIdResolver currentProfileIdResolver;
+    private ProfileIdResolver profileIdResolver;
 
     @MockBean
     private CoffeeproductionContextFacade coffeeproductionContextFacade;
@@ -67,14 +78,14 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn401WhenProfileCannotBeResolved() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.empty());
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.empty());
         mockMvc.perform(get("/api/v1/costing/batches"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void shouldCreateBatchWithUserIdFromJwt() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(commandService.handle(any(CreateBatchCommand.class)))
                 .thenReturn(Optional.of(ownerBatch()));
 
@@ -92,7 +103,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn400WhenBatchNameIsBlank() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
 
         var body = """
                 { "batchName": "", "registrationDate": "2026-01-15" }
@@ -106,7 +117,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldListOnlyOwnBatches() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchesByUserIdQuery.class)))
                 .thenReturn(List.of(ownerBatch()));
 
@@ -118,7 +129,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn404WhenBatchNotFound() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchByIdQuery.class))).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/costing/batches/55"))
@@ -127,7 +138,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn403WhenFetchingForeignBatch() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchByIdQuery.class)))
                 .thenReturn(Optional.of(foreignBatch()));
 
@@ -137,7 +148,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldUpsertDirectCostsWhenLotBelongsToUser() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchByIdQuery.class)))
                 .thenReturn(Optional.of(ownerBatch()));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
@@ -162,7 +173,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn403WhenDirectCostsCoffeeLotIsForeign() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchByIdQuery.class)))
                 .thenReturn(Optional.of(ownerBatch()));
         when(coffeeproductionContextFacade.getCoffeeLotById(1L))
@@ -181,7 +192,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn400WhenDirectCostsMissingCoffeeLotId() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchByIdQuery.class)))
                 .thenReturn(Optional.of(ownerBatch()));
 
@@ -198,7 +209,7 @@ class BatchesControllerTest {
 
     @Test
     void shouldReturn400WhenComputingWithoutCosts() throws Exception {
-        when(currentProfileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
+        when(profileIdResolver.resolveProfileId()).thenReturn(Optional.of(OWNER));
         when(queryService.handle(any(GetBatchByIdQuery.class)))
                 .thenReturn(Optional.of(ownerBatch()));
         when(commandService.handle(any(com.cafemetrix.cafelab.costing.domain.model.commands.ComputeBatchCostingCommand.class)))
