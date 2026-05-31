@@ -2,12 +2,11 @@ package com.cafemetrix.cafelab.production.infrastructure.clients;
 
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeLotSummary;
 import com.cafemetrix.cafelab.production.interfaces.acl.CoffeeproductionContextFacade;
+import com.cafemetrix.cafelab.shared.infrastructure.web.CurrentProfileIdResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -17,9 +16,19 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Implementacion HTTP del facade. Llama a {@code GET /api/v1/coffee-lots/{id}} del monolitico
- * reenviando el Bearer token del request actual. Si el monolitico responde 200 entonces el lote
- * existe y el usuario tiene acceso; si responde 403/404 se devuelve {@link Optional#empty()}.
+ * Cliente HTTP del Anti-Corruption Layer hacia el bounded context Production,
+ * que vive en el microservicio Management (URL en {@code management.base-url}).
+ *
+ * <p>Como Costing y Management viven detras del mismo API Gateway, la llamada
+ * es service-to-service: NO hay validacion JWT en la comunicacion interna. Se
+ * propaga {@code X-User-Id} (cuando esta presente en el request original) para
+ * trazabilidad y para que Management pueda aplicar sus propias reglas si lo
+ * decide. La pertenencia del lote la decide quien llama, comparando
+ * {@link CoffeeLotSummary#getUserId()} contra el {@code currentUserId}.</p>
+ *
+ * <p>El endpoint consumido es {@code GET /api/v1/coffee-lots/{id}} y se acepta
+ * tanto camelCase ({@code userId/id}) como snake_case ({@code user_id/coffee_lot_id})
+ * en la respuesta JSON.</p>
  */
 @Service
 public class CoffeeproductionMonolithClient implements CoffeeproductionContextFacade {
@@ -28,42 +37,70 @@ public class CoffeeproductionMonolithClient implements CoffeeproductionContextFa
 
     private final RestClient restClient;
 
-    public CoffeeproductionMonolithClient(@Value("${monolith.base-url}") String baseUrl) {
+    public CoffeeproductionMonolithClient(@Value("${management.base-url}") String baseUrl) {
         this.restClient = RestClient.builder().baseUrl(baseUrl).build();
     }
 
     @Override
     public Optional<CoffeeLotSummary> getCoffeeLotById(Long coffeeLotId) {
         if (coffeeLotId == null) return Optional.empty();
-        String bearer = currentBearerToken();
-        if (bearer == null) {
-            LOGGER.debug("Sin Authorization en el request actual; no se puede consultar el lote {}", coffeeLotId);
-            return Optional.empty();
-        }
         try {
             Map<String, Object> body = restClient.get()
                     .uri("/api/v1/coffee-lots/{id}", coffeeLotId)
-                    .header(HttpHeaders.AUTHORIZATION, bearer)
+                    .headers(headers -> currentUserIdHeader()
+                            .ifPresent(v -> headers.set(CurrentProfileIdResolver.USER_ID_HEADER, v)))
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> {
-                        // 401/403/404 -> el monolitico ya valido y rechazo; tratamos como "no accesible"
+                    .onStatus(status -> status.value() == 404, (req, resp) -> {
+                        // Lote inexistente: lo tratamos como "no accesible" (no excepcion).
+                    })
+                    .onStatus(status -> status.value() == 401 || status.value() == 403, (req, resp) -> {
+                        LOGGER.warn("Management rechazo {} para lote {} (sin permisos)",
+                                resp.getStatusCode(), coffeeLotId);
                     })
                     .body(new org.springframework.core.ParameterizedTypeReference<>() {});
-            if (body == null || body.get("id") == null) return Optional.empty();
-            Long id = Long.valueOf(body.get("id").toString());
-            Long userId = body.get("userId") != null ? Long.valueOf(body.get("userId").toString()) : null;
+            if (body == null) return Optional.empty();
+
+            Long id = readLong(body, "id", "coffee_lot_id", "coffeeLotId");
+            Long userId = readLong(body, "userId", "user_id");
+
+            if (id == null) {
+                LOGGER.warn("Respuesta de Management para lote {} no trae 'id' ni 'coffee_lot_id'. Body: {}",
+                        coffeeLotId, body.keySet());
+                return Optional.empty();
+            }
             return Optional.of(new CoffeeLotSummary(id, userId));
         } catch (Exception ex) {
-            LOGGER.warn("Fallo al consultar lote {} en el monolitico: {}", coffeeLotId, ex.getMessage());
+            LOGGER.warn("Fallo al consultar lote {} en Management: {}", coffeeLotId, ex.getMessage());
             return Optional.empty();
         }
     }
 
-    private String currentBearerToken() {
+    /** Lee el primer campo presente entre varios alias y lo convierte a Long. */
+    private static Long readLong(Map<String, Object> body, String... fieldAliases) {
+        for (String field : fieldAliases) {
+            Object value = body.get(field);
+            if (value != null) {
+                try {
+                    return Long.valueOf(value.toString().trim());
+                } catch (NumberFormatException ex) {
+                    LOGGER.warn("Campo '{}' no es un Long valido: {}", field, value);
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Devuelve el X-User-Id del request actual, si esta presente. */
+    private static Optional<String> currentUserIdHeader() {
         var attrs = RequestContextHolder.getRequestAttributes();
-        if (!(attrs instanceof ServletRequestAttributes sra)) return null;
+        if (!(attrs instanceof ServletRequestAttributes sra)) {
+            return Optional.empty();
+        }
         HttpServletRequest req = sra.getRequest();
-        String header = req.getHeader(HttpHeaders.AUTHORIZATION);
-        return (header != null && header.startsWith("Bearer ")) ? header : null;
+        String header = req.getHeader(CurrentProfileIdResolver.USER_ID_HEADER);
+        if (header == null || header.isBlank()) {
+            header = req.getHeader(CurrentProfileIdResolver.USER_ID_HEADER_ALT);
+        }
+        return (header != null && !header.isBlank()) ? Optional.of(header) : Optional.empty();
     }
 }
